@@ -1,0 +1,7 @@
+click==8.1.7
+iniconfig==2.0.0
+packaging==24.0
+pluggy==1.4.0
+pytest==8.1.1
+typer==0.9.0
+typing_extensions==4.10.0
