@@ -1,7 +1,7 @@
 # SWE-bench Util
 Scripts for working with SWE-bench, the AI coding agent benchmark.
 
-If you are trying to beat Devin, see also The SWE-bench (fork)[https://github.com/OpenAgentsInc/SWE-bench] from OpenAgentsInc to run your agent.
+If you are trying to beat Devin, see also The [SWE-bench fork](https://github.com/OpenAgentsInc/SWE-bench) from OpenAgentsInc to run your agent.
 ## Setup
 
 Setup venv
