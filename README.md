@@ -16,21 +16,26 @@ python -m pip install -r requirements.txt
 
 ## Run
 ```
-python -m swe_bench_util
+python -m swe_bench_util --help
 ```
 
-Show the first example case:
+Save the first example case. This will download the full dataset on first run, caching it with the `datasets` library.
 
 ```
 python -m swe_bench_util get
 ```
 
+Output
+```
+File 'rows/sqlfluff__sqlfluff-4764.json' was saved
+File 'rows/sqlfluff__sqlfluff-4764.md' was saved
+```
+
 Use jq to show a subset of the JSON.
 
 ```
-python -m swe_bench_util get | jq '. | {repo, instance_id, base_commit, problem_statement, , FAIL_TO_PASS, PASS_TO_PASS}'
+jq '. | {repo, instance_id, base_commit, problem_statement}' rows/sqlfluff__sqlfluff-4764.json
 ```
-
 ## Data
 
 ```
