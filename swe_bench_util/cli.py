@@ -19,8 +19,13 @@ get_app = typer.Typer()
 app.add_typer(get_app, name="get")
 
 load_dotenv("./.env")
-client = patch(OpenAI())
 
+OPENAI_CLIENT = None
+def open_ai_client():
+    global OPENAI_CLIENT
+    if OPENAI_CLIENT is None:
+        OPENAI_CLIENT = patch(OpenAI())
+    return OPENAI_CLIENT
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -144,7 +149,7 @@ def upload_file(file_path):
         if any(file_path.endswith(ext) for ext in exclude_exts):
             print(f"Skipping {file_path} because it has an excluded extension")
             return None
-        file = client.files.create(
+        file = open_ai_client().files.create(
             file=open(
                 file_path,
                 "rb",

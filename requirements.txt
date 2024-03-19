@@ -9,3 +9,4 @@ datasets==2.18.0
 openai==1.14.1
 streaming-assistants==0.14.0
 python-dotenv==1.0.1
+ruff==0.3.3
