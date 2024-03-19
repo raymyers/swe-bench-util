@@ -13,6 +13,7 @@ from openai import OpenAI
 
 from streaming_assistants import patch
 
+from swe_bench_util.assistants import create_assistant, run_inference
 
 app = typer.Typer()
 get_app = typer.Typer()
@@ -26,7 +27,6 @@ def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"{__app_name__} v{__version__}")
         raise typer.Exit()
-
 
 def write_file(path, text):
     with open(path, 'w') as f:
@@ -150,7 +150,7 @@ def upload_file(file_path):
                 "rb",
             ),
             purpose="assistants",
-            embedding_model="text-embedding-3-large",
+            embedding_model="text-embedding-ada-002",
         )
         return file.id
     # handle 501 for unsupported file types or other errors
@@ -187,27 +187,40 @@ def process_repo_files(index:int=0, split: str='dev', dataset_name='princeton-nl
     repo_name = row_data['repo'].split('/')[-1]
     repo = f'git@github.com:{row_data["repo"]}.git'
     base_commit = row_data['base_commit']
-    path = f'/tmp/{dataset_name}-{split}/{repo_name}/{base_commit}'
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    maybe_clone(repo, path)
-    checkout_commit(path, base_commit)
-    file_ids = process_files_in_repo(path)
-    path = f'{dataset_name}-{split}'
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
+    repo_path = f'repos/{dataset_name}-{split}/{repo_name}/{base_commit}'
+    file_ids = []
+    data_path = f'{dataset_name}-{split}'
+    if os.path.exists(f'{data_path}/file_ids.json'):
+        with open(f'{data_path}/file_ids.json', 'r') as file:
+            file_ids = json.load(file)
+    else:
+        if not os.path.exists(repo_path):
+            os.makedirs(repo_path)
+            print(f"Directory '{data_path}' was created.")
+        maybe_clone(repo, repo_path)
+        checkout_commit(repo_path, base_commit)
+        file_ids = process_files_in_repo(repo_path)
+        if not os.path.exists(data_path):
+            os.makedirs(data_path)
+            print(f"Directory '{data_path}' was created.")
+        write_file(f"{data_path}/file_ids.json", json.dumps(file_ids, indent=2))
+    assistant = create_assistant(file_ids)
+    write_file(f"{data_path}/assistant_id.txt", assistant.id)
+    run_inference(assistant.id, row_data)
 
-@get_app.command()
+
+@app.command()
 def row(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
     """Download one row"""
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
     id = row_data['instance_id']
-    write_json('rows', f"{id}", row_data)
-    write_markdown('rows', f"{id}", row_data)
+    path = f'{dataset_name}-{split}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' was created.")
+    write_json(path, f"{id}", row_data)
+    write_markdown(path, f"{id}", row_data)
     
 def diff_file_names(text: str) -> list[str]:
     return [
@@ -216,9 +229,9 @@ def diff_file_names(text: str) -> list[str]:
         if line.startswith('+++')
     ]
 
-@get_app.command()
-def oracle(split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
-    """Down load oracle (patched files) for all rows in split"""
+@app.command()
+def oracle(split: str='dev', dataset_name='princeton-nlp/SWE-bench_oracle'):
+    """Download oracle (patched files) for all rows in split"""
     dataset = load_dataset(dataset_name, split=split)
     result = []
     for row_data in dataset:
