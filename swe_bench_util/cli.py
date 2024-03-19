@@ -73,10 +73,77 @@ def maybe_clone(repo_url, repo_dir):
 def checkout_commit(repo_dir, commit_hash):
     subprocess.run(['git', 'checkout', commit_hash], cwd=repo_dir, check=True)
 
+exclude_exts: list[str] = [
+    ".min.js",
+    ".min.js.map",
+    ".min.css",
+    ".min.css.map",
+    ".tfstate",
+    ".tfstate.backup",
+    ".jar",
+    ".ipynb",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".download",
+    ".gif",
+    ".bmp",
+    ".tiff",
+    ".ico",
+    ".mp3",
+    ".wav",
+    ".wma",
+    ".ogg",
+    ".flac",
+    ".mp4",
+    ".avi",
+    ".mkv",
+    ".mov",
+    ".patch",
+    ".patch.disabled",
+    ".wmv",
+    ".m4a",
+    ".m4v",
+    ".3gp",
+    ".3g2",
+    ".rm",
+    ".swf",
+    ".flv",
+    ".iso",
+    ".bin",
+    ".tar",
+    ".zip",
+    ".7z",
+    ".gz",
+    ".rar",
+    ".pdf",
+    ".doc",
+    ".docx",
+    ".xls",
+    ".xlsx",
+    ".ppt",
+    ".pptx",
+    ".svg",
+    ".parquet",
+    ".pyc",
+    ".pub",
+    ".pem",
+    ".ttf",
+    ".dfn",
+    ".dfm",
+    ".feature",
+    "sweep.yaml",
+    "pnpm-lock.yaml",
+    "LICENSE",
+    "poetry.lock",
+]
 def upload_file(file_path):
     # Your processing logic for each file
     print(f"Processing {file_path}")
     try:
+        if any(file_path.endswith(ext) for ext in exclude_exts):
+            print(f"Skipping {file_path} because it has an excluded extension")
+            return None
         file = client.files.create(
             file=open(
                 file_path,
