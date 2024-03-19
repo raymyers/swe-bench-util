@@ -64,6 +64,9 @@ def write_markdown(path, name, data):
 
 
 def maybe_clone(repo_url, repo_dir):
+    if not os.path.exists(repo_dir):
+        os.makedirs(repo_dir)
+        print(f"Directory '{repo_dir}' was created.")
     if not os.path.exists(f"{repo_dir}/.git"):
         # Clone the repo if the directory doesn't exist
         result = subprocess.run(
@@ -80,17 +83,29 @@ def checkout_commit(repo_dir, commit_hash):
     subprocess.run(["git", "checkout", commit_hash], cwd=repo_dir, check=True)
 
 
+def checkout_dir(dataset_name: str, repo: str):
+    return f"checkouts/{dataset_name}/{repo.replace('/', '__')}"
+
+
+def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> str:
+    repo_url = f"git@github.com:{repo}.git"
+    path = checkout_dir(dataset_name, repo)
+    maybe_clone(repo_url, path)
+    # Worktrees are another option here if we want to support concurrent checkouts
+    checkout_commit(path, base_commit)
+    return path
+
+
 @app.command()
-def get(index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def checkout(
+    index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+):
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
-    id = row_data["instance_id"]
-    path = f"{dataset_name}-{split}"
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    write_json(path, f"{id}", row_data)
-    write_markdown(path, f"{id}", row_data)
+    path = checkout_repo_at_commit(
+        row_data["repo"], dataset_name, row_data["base_commit"]
+    )
+    print(f"checked out to '{path}'")
 
 
 @index_app.command()
@@ -99,15 +114,9 @@ def astra_assistants(
 ):
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
-    repo_name = row_data["repo"].split("/")[-1]
-    repo = f'git@github.com:{row_data["repo"]}.git'
-    base_commit = row_data["base_commit"]
-    path = f"/tmp/{dataset_name}-{split}/{repo_name}/{base_commit}"
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    maybe_clone(repo, path)
-    checkout_commit(path, base_commit)
+    path = checkout_repo_at_commit(
+        row_data["repo"], dataset_name, row_data["base_commit"]
+    )
     file_ids = index_to_astra_assistants(path)
     path = f"{dataset_name}-{split}"
     if not os.path.exists(path):
@@ -118,12 +127,12 @@ def astra_assistants(
 
 @get_app.command()
 def row(index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
-    """Download one row"""
+    """Download one example"""
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
     id = row_data["instance_id"]
-    write_json("rows", f"{id}", row_data)
-    write_markdown("rows", f"{id}", row_data)
+    write_json("examples", f"{id}", row_data)
+    write_markdown("examples", f"{id}", row_data)
 
 
 def diff_file_names(text: str) -> list[str]:
@@ -134,7 +143,7 @@ def diff_file_names(text: str) -> list[str]:
 
 @get_app.command()
 def oracle(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
-    """Down load oracle (patched files) for all rows in split"""
+    """Down load oracle (patched files) for all examples in split"""
     dataset = load_dataset(dataset_name, split=split)
     result = []
     for row_data in dataset:
@@ -149,7 +158,7 @@ def oracle(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
                 "test_patch_files": test_patch_files,
             }
         )
-    write_json("rows", "oracle", result)
+    write_json("examples", "oracle", result)
 
 
 @app.callback()
