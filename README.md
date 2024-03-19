@@ -23,8 +23,9 @@ python -m swe_bench_util --help
 Save the first example case. This will download the full dataset on first run, caching it with the `datasets` library.
 
 ```
-python -m swe_bench_util get
+python -m swe_bench_util get row
 ```
+
 
 Output
 ```
@@ -37,6 +38,20 @@ Use jq to show a subset of the JSON.
 ```
 jq '. | {repo, instance_id, base_commit, problem_statement}' rows/sqlfluff__sqlfluff-4764.json
 ```
+
+Save the Oracle (patched file list) for the dev subset.
+```
+python -m swe_bench_util get oracle
+```
+Output:
+```
+File 'rows/oracle.json' was saved
+```
+```
+jq '.[] | .repo' rows/oracle.json  | jq -s 'unique'
+jq '.[] | {repo, base_commit}' rows/oracle.json  | jq -s 'unique'
+```
+
 ## Data
 
 ```

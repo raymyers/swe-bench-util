@@ -15,6 +15,8 @@ from streaming_assistants import patch
 
 
 app = typer.Typer()
+get_app = typer.Typer()
+app.add_typer(get_app, name="get")
 
 load_dotenv("./.env")
 client = patch(OpenAI())
@@ -89,8 +91,6 @@ def upload_file(file_path):
         print(f"Error processing {file_path}: {e}")
         return None
 
-
-
 def process_files_in_repo(repo_dir):
     file_ids = []
     for root, dirs, files in os.walk(repo_dir):
@@ -100,8 +100,6 @@ def process_files_in_repo(repo_dir):
             if file_id:
                 file_ids.append(file_id)
     return file_ids
-
-
 
 @app.command()
 def get(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
@@ -114,7 +112,6 @@ def get(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
         print(f"Directory '{path}' was created.")
     write_json(path, f"{id}", row_data)
     write_markdown(path, f"{id}", row_data)
-
 
 @app.command()
 def process_repo_files(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
@@ -136,6 +133,38 @@ def process_repo_files(index:int=0, split: str='dev', dataset_name='princeton-nl
         print(f"Directory '{path}' was created.")
     write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
 
+@get_app.command()
+def row(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+    """Download one row"""
+    dataset = load_dataset(dataset_name, split=split)
+    row_data = dataset[index]
+    id = row_data['instance_id']
+    write_json('rows', f"{id}", row_data)
+    write_markdown('rows', f"{id}", row_data)
+    
+def diff_file_names(text: str) -> list[str]:
+    return [
+        line[len("+++ b/"):] 
+        for line in text.split('\n') 
+        if line.startswith('+++')
+    ]
+
+@get_app.command()
+def oracle(split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+    """Down load oracle (patched files) for all rows in split"""
+    dataset = load_dataset(dataset_name, split=split)
+    result = []
+    for row_data in dataset:
+        patch_files = diff_file_names(row_data['patch'])
+        test_patch_files = diff_file_names(row_data['test_patch'])
+        result.append({
+            "id": row_data['instance_id'],
+            "repo": row_data['repo'],
+            "base_commit": row_data['base_commit'],
+            "patch_files": patch_files,
+            "test_patch_files": test_patch_files 
+        })
+    write_json('rows', "oracle", result)
 
 @app.callback()
 def main(
