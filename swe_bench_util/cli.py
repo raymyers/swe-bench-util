@@ -11,6 +11,8 @@ from swe_bench_util import __app_name__, __version__
 from datasets import load_dataset
 
 app = typer.Typer()
+get_app = typer.Typer()
+app.add_typer(get_app, name="get")
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -53,16 +55,39 @@ def write_markdown(path, name, data):
     md_path = f"{path}/{name}.md"
     write_file(md_path, text)
 
-@app.command()
-def get(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+@get_app.command()
+def row(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+    """Download one row"""
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
     id = row_data['instance_id']
     write_json('rows', f"{id}", row_data)
     write_markdown('rows', f"{id}", row_data)
     
-    
+def diff_file_names(text: str) -> list[str]:
+    return [
+        line[len("+++ b/"):] 
+        for line in text.split('\n') 
+        if line.startswith('+++')
+    ]
 
+
+@get_app.command()
+def oracle(split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+    """Down load oracle (patched files) for all rows in split"""
+    dataset = load_dataset(dataset_name, split=split)
+    result = []
+    for row_data in dataset:
+        patch_files = diff_file_names(row_data['patch'])
+        test_patch_files = diff_file_names(row_data['test_patch'])
+        result.append({
+            "id": row_data['instance_id'],
+            "repo": row_data['repo'],
+            "base_commit": row_data['base_commit'],
+            "patch_files": patch_files,
+            "test_patch_files": test_patch_files 
+        })
+    write_json('rows', "oracle", result)
 
 @app.callback()
 def main(
