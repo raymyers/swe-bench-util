@@ -3,14 +3,22 @@
 from typing import Optional
 import json
 import sys
-
+import os
+import subprocess
 import typer
-
 from swe_bench_util import __app_name__, __version__
-
 from datasets import load_dataset
+from dotenv import load_dotenv
+from openai import OpenAI
+
+from streaming_assistants import patch
+
 
 app = typer.Typer()
+
+load_dotenv("./.env")
+client = patch(OpenAI())
+
 
 def _version_callback(value: bool) -> None:
     if value:
@@ -53,15 +61,80 @@ def write_markdown(path, name, data):
     md_path = f"{path}/{name}.md"
     write_file(md_path, text)
 
+def maybe_clone(repo_url, repo_dir):
+    if not os.path.exists(f"{repo_dir}/.git"):
+        # Clone the repo if the directory doesn't exist
+        result = subprocess.run(['git', 'clone', repo_url, repo_dir], check=True, text=True, capture_output=True)
+        print("Output:", result.stdout)
+        print("Error:", result.stderr)
+
+def checkout_commit(repo_dir, commit_hash):
+    subprocess.run(['git', 'checkout', commit_hash], cwd=repo_dir, check=True)
+
+def upload_file(file_path):
+    # Your processing logic for each file
+    print(f"Processing {file_path}")
+    try:
+        file = client.files.create(
+            file=open(
+                file_path,
+                "rb",
+            ),
+            purpose="assistants",
+            embedding_model="text-embedding-3-large",
+        )
+        return file.id
+    # handle 501 for unsupported file types or other errors
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+        return None
+
+
+
+def process_files_in_repo(repo_dir):
+    file_ids = []
+    for root, dirs, files in os.walk(repo_dir):
+        for file_name in files:
+            file_path = os.path.join(root, file_name)
+            file_id = upload_file(file_path)
+            if file_id:
+                file_ids.append(file_id)
+    return file_ids
+
+
+
 @app.command()
 def get(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[index]
     id = row_data['instance_id']
-    write_json('rows', f"{id}", row_data)
-    write_markdown('rows', f"{id}", row_data)
-    
-    
+    path = f'{dataset_name}-{split}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' was created.")
+    write_json(path, f"{id}", row_data)
+    write_markdown(path, f"{id}", row_data)
+
+
+@app.command()
+def process_repo_files(index:int=0, split: str='dev', dataset_name='princeton-nlp/SWE-bench'):
+    dataset = load_dataset(dataset_name, split=split)
+    row_data = dataset[index]
+    repo_name = row_data['repo'].split('/')[-1]
+    repo = f'git@github.com:{row_data["repo"]}.git'
+    base_commit = row_data['base_commit']
+    path = f'/tmp/{dataset_name}-{split}/{repo_name}/{base_commit}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' was created.")
+    maybe_clone(repo, path)
+    checkout_commit(path, base_commit)
+    file_ids = process_files_in_repo(path)
+    path = f'{dataset_name}-{split}'
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' was created.")
+    write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
 
 
 @app.callback()
