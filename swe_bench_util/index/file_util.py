@@ -57,7 +57,6 @@ EXCLUDE_EXTS: list[str] = [
     ".dfn",
     ".dfm",
     ".feature",
-    "sweep.yaml",
     "pnpm-lock.yaml",
     "LICENSE",
     "poetry.lock",
