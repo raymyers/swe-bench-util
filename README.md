@@ -85,7 +85,7 @@ jq '.[] | {repo, base_commit}' rows/oracle.json  | jq -s 'unique'
 ```sh
 python -m pytest
 
-python -m ruff check
+python -m ruff check --fix
 
 python -m ruff format
 ```
