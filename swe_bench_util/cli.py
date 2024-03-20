@@ -98,10 +98,10 @@ def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> s
 
 @app.command()
 def checkout(
-    index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
 ):
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
+    row_data = dataset[start]
     path = checkout_repo_at_commit(
         row_data["repo"], dataset_name, row_data["base_commit"]
     )
@@ -110,10 +110,10 @@ def checkout(
 
 @index_app.command()
 def astra_assistants(
-    index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
 ):
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
+    row_data = dataset[start]
     path = checkout_repo_at_commit(
         row_data["repo"], dataset_name, row_data["base_commit"]
     )
@@ -126,10 +126,10 @@ def astra_assistants(
 
 
 @get_app.command()
-def row(index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def row(start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
     """Download one example"""
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
+    row_data = dataset[start]
     id = row_data["instance_id"]
     write_json("examples", f"{id}", row_data)
     write_markdown("examples", f"{id}", row_data)
