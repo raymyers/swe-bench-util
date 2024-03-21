@@ -6,7 +6,7 @@ If you are trying to beat Devin, see also The [SWE-bench fork](https://github.co
 ## Features
 * See usage info with `--help` and `<subcommand> --help`
   * `python -m swe_bench_util --help`
-* `get row` Download SWE-bench examples from HuggingFace to json file
+* `get rows` Download SWE-bench examples from HuggingFace to json file
 * `get oracle` Get "oracle" patch file lists parsed from diffs ([context](https://github.com/raymyers/swe-bench-util/issues/1))
 * `checkout` Clone the repo for an example and checkout the base_commit
 * `index astra_assistants` checkout example then upload to DataStack's [Astra Assistants](https://www.datastax.com/blog/introducing-the-astra-assistants-api) using phact's [streaming-assistants](https://github.com/phact/streaming-assistants) library
@@ -37,7 +37,7 @@ This assumes the poetry install has gone onto your path, otherwise you can use `
 Save the first example case. This will download the full dataset on first run, caching it with the `datasets` library.
 
 ```sh
-swe_bench_util get row
+swe_bench_util get rows --split 'dev[0:1]'
 ```
 
 
@@ -65,14 +65,20 @@ File 'examples/oracle.json' was saved
 jq '.[] | .repo' examples/oracle.json  | jq -s 'unique'
 jq '.[] | {repo, base_commit}' examples/oracle.json  | jq -s 'unique'
 ```
+Git checkout the repo / base_commit of an example.
+`swe-bench-util checkout --id pydicom__pydicom-793`
 
 ## Data
 
-By default, most commands will operate on the first row of the `dev` set, which is split `dev[0:1]` using the Huggingface [datasets](https://huggingface.co/docs/datasets/loading) API. You can specify a split using `--split`, for instance:
+By default, most commands will operate on the `dev` split, using the Huggingface [datasets](https://huggingface.co/docs/datasets/loading) API. You can specify a split using `--split`, for instance:
 
 * `--split dev` the entire dev split
 * `--split 'dev[0:10]'` first 10 rows
 * `--split 'dev[:10%]'` 10% sample
+
+You can also filter by repo or id. Filters are applied *after* split, so if you select a row range and a filter you may come up empty.
+* `--repo pydicom/pydicom`
+* `--id pydicom__pydicom-1555`
 
 Here is the shape of the data.
 

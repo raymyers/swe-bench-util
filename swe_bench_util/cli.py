@@ -100,8 +100,13 @@ def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> s
 
 
 @app.command()
-def checkout(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
-    dataset = load_dataset(dataset_name, split=split)
+def checkout(
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
+):
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     for row_data in dataset:
         path = checkout_repo_at_commit(
             row_data["repo"], dataset_name, row_data["base_commit"]
@@ -111,9 +116,13 @@ def checkout(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
 
 @index_app.command()
 def astra_assistants(
-    split: str = "dev[0:1]", dataset_name="princeton-nlp/SWE-bench", max: int = 1
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    max: int = 1,
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
 ):
-    dataset = load_dataset(dataset_name, split=split)
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     if len(dataset) > max:
         user_input = input(
             f"Selected {len(dataset)} entries in split {split}. Do you want to continue indexing? (y/n): "
@@ -142,13 +151,32 @@ def astra_assistants(
 
 
 @get_app.command()
-def row(split: str = "dev[0:1]", dataset_name="princeton-nlp/SWE-bench"):
+def rows(
+    split: str = "dev",
+    dataset_name: str = "princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
+):
     """Download one example"""
-    dataset = load_dataset(dataset_name, split=split)
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     for row_data in dataset:
-        id = row_data["instance_id"]
-        write_json("examples", f"{id}", row_data)
-        write_markdown("examples", f"{id}", row_data)
+        row_id = row_data["instance_id"]
+        write_json("examples", f"{row_id}", row_data)
+        write_markdown("examples", f"{row_id}", row_data)
+
+
+def load_filtered_dataset(
+    split: str, dataset_name: str, repo: Optional[str] = None, id: Optional[str] = None
+):
+    print(f"using --dataset-name '{dataset_name}' --split '{split}'")
+    dataset = load_dataset(dataset_name, split=split)
+    if repo:
+        print(f"      --repo '{repo}'")
+        dataset = dataset.filter(lambda el: el["repo"] == repo)
+    if id:
+        print(f"      --id '{id}'")
+        dataset = dataset.filter(lambda el: el["instance_id"] == id)
+    return dataset
 
 
 def diff_file_names(text: str) -> list[str]:
@@ -158,9 +186,14 @@ def diff_file_names(text: str) -> list[str]:
 
 
 @get_app.command()
-def oracle(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def oracle(
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
+):
     """Down load oracle (patched files) for all examples in split"""
-    dataset = load_dataset(dataset_name, split=split)
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     result = []
     for row_data in dataset:
         patch_files = diff_file_names(row_data["patch"])
