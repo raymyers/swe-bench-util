@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 
 from swe_bench_util import __app_name__, __version__
 
-from swe_bench_util.index.astra_assistants import index_to_astra_assistants, create_assistant, get_retrieval_files
+from swe_bench_util.index.astra_assistants import (
+    index_to_astra_assistants,
+    create_assistant,
+    get_retrieval_files,
+)
 
 app = typer.Typer()
 get_app = typer.Typer()
@@ -26,6 +30,7 @@ def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"{__app_name__} v{__version__}")
         raise typer.Exit()
+
 
 def write_file(path, text):
     with open(path, "w") as f:
@@ -80,8 +85,10 @@ def maybe_clone(repo_url, repo_dir):
 def checkout_commit(repo_dir, commit_hash):
     subprocess.run(["git", "checkout", commit_hash], cwd=repo_dir, check=True)
 
+
 def checkout_dir(dataset_name: str, repo: str):
     return f"checkouts/{dataset_name}/{repo.replace('/', '__')}"
+
 
 def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> str:
     repo_url = f"git@github.com:{repo}.git"
@@ -91,9 +98,10 @@ def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> s
     checkout_commit(path, base_commit)
     return path
 
+
 @app.command()
 def checkout(
-        start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
 ):
     dataset = load_dataset(dataset_name, split=split)
     row_data = dataset[start]
@@ -116,9 +124,9 @@ def astra_assistants(
         os.makedirs(path)
         print(f"Directory '{path}' was created.")
     file_ids = []
-    if os.path.exists(f'{path}/file_ids.json'):
-        with open(f'{path}/file_ids.json', 'r') as file:
-            print(f'trying to load file {file} from {path}/file_ids.json')
+    if os.path.exists(f"{path}/file_ids.json"):
+        with open(f"{path}/file_ids.json", "r") as file:
+            print(f"trying to load file {file} from {path}/file_ids.json")
             file_ids = json.load(file)
     else:
         file_ids = index_to_astra_assistants(path)

@@ -57,6 +57,7 @@ def index_to_astra_assistants(repo_dir):
                 print(json.dumps(file_ids))
     return file_ids
 
+
 def create_assistant(file_ids):
     client = open_ai_client()
     system_prompt = """
@@ -131,16 +132,20 @@ return points
 
 
 class EventHandler(AssistantEventHandler):
-
-    #init
+    # init
     def __init__(self):
         super().__init__()
         self.file_names = []
+
     @override
     def on_run_step_done(self, run_step) -> None:
-            chunks = [chunk.retrieval for chunk in run_step.step_details.tool_calls if chunk.retrieval][0]
-            self.file_names = [chunk["file_name"] for chunk in chunks]
-            print(f'Files used in retrieval: {json.dumps(self.file_names)}')
+        chunks = [
+            chunk.retrieval
+            for chunk in run_step.step_details.tool_calls
+            if chunk.retrieval
+        ][0]
+        self.file_names = [chunk["file_name"] for chunk in chunks]
+        print(f"Files used in retrieval: {json.dumps(self.file_names)}")
 
 
 def get_retrieval_files(assistant_id, row_data):
@@ -159,14 +164,14 @@ def get_retrieval_files(assistant_id, row_data):
     print(f"running inference for {row_data['instance_id']}")
 
     handler = EventHandler()
-    print(f"creating run")
+    print("creating run")
     with open_ai_client().beta.threads.runs.create_and_stream(
-            thread_id=thread.id,
-            assistant_id=assistant_id,
-            event_handler=handler,
+        thread_id=thread.id,
+        assistant_id=assistant_id,
+        event_handler=handler,
     ) as stream:
         stream.until_done()
-        #for text in stream.text_deltas:
+        # for text in stream.text_deltas:
         #    print(text, end="", flush=True)
         #    print()
-    return(handler.file_names)
+    return handler.file_names
