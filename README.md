@@ -13,28 +13,31 @@ If you are trying to beat Devin, see also The [SWE-bench fork](https://github.co
 
 ## Setup
 
-Setup venv
+Install poetry if you don't have it
 ```sh
-python3 -m venv ./venv
-source venv/bin/activate
+python3 -m pip install poetry
 ```
 
 If using a feature that requires a vendor API, copy `.env.example` to `.env` and fill in the values.
 
-Install dependencies
+Install dependencies and initialize an editable command
 ```sh
-python -m pip install -r requirements.txt
+poetry install
 ```
 
 ## Run
+
 ```sh
-python -m swe_bench_util --help
+swe_bench_util --help
 ```
+
+This assumes the poetry install has gone onto your path, otherwise you can use `python -m swe_bench_util`.
+
 
 Save the first example case. This will download the full dataset on first run, caching it with the `datasets` library.
 
 ```sh
-python -m swe_bench_util get row
+swe_bench_util get row
 ```
 
 
@@ -52,7 +55,7 @@ jq '. | {repo, instance_id, base_commit, problem_statement}' rows/sqlfluff__sqlf
 
 Save the Oracle (patched file list) for the dev subset.
 ```sh
-python -m swe_bench_util get oracle
+swe_bench_util get oracle
 ```
 Output:
 ```
