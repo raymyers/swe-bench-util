@@ -83,6 +83,12 @@ jq '.[] | {repo, base_commit}' rows/oracle.json  | jq -s 'unique'
 ## Checks
 
 ```sh
+make check
+```
+
+That is equivelant to:
+
+```sh
 python -m pytest
 
 python -m ruff check --fix
