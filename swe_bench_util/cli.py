@@ -100,50 +100,55 @@ def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> s
 
 
 @app.command()
-def checkout(
-    start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
-):
+def checkout(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[start]
-    path = checkout_repo_at_commit(
-        row_data["repo"], dataset_name, row_data["base_commit"]
-    )
-    print(f"checked out to '{path}'")
+    for row_data in dataset:
+        path = checkout_repo_at_commit(
+            row_data["repo"], dataset_name, row_data["base_commit"]
+        )
+        print(f"checked out to '{path}'")
 
 
 @index_app.command()
 def astra_assistants(
-    start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    split: str = "dev[0:1]", dataset_name="princeton-nlp/SWE-bench", max: int = 1
 ):
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[start]
-    path = checkout_repo_at_commit(
-        row_data["repo"], dataset_name, row_data["base_commit"]
-    )
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    file_ids = []
-    if os.path.exists(f"{path}/file_ids.json"):
-        with open(f"{path}/file_ids.json", "r") as file:
-            print(f"trying to load file {file} from {path}/file_ids.json")
-            file_ids = json.load(file)
-    else:
-        file_ids = index_to_astra_assistants(path)
-    write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
-    assistant = create_assistant(file_ids)
-    write_file(f"{path}/assistant_id.txt", assistant.id)
-    get_retrieval_files(assistant.id, row_data)
+    if len(dataset) > max:
+        user_input = input(
+            f"Selected {len(dataset)} entries in split {split}. Do you want to continue indexing? (y/n): "
+        )
+        if user_input.lower() != "y":
+            print("Aborting.")
+            return
+    for row_data in dataset:
+        path = checkout_repo_at_commit(
+            row_data["repo"], dataset_name, row_data["base_commit"]
+        )
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Directory '{path}' was created.")
+        file_ids = []
+        if os.path.exists(f"{path}/file_ids.json"):
+            with open(f"{path}/file_ids.json", "r") as file:
+                print(f"trying to load file {file} from {path}/file_ids.json")
+                file_ids = json.load(file)
+        else:
+            file_ids = index_to_astra_assistants(path)
+        write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
+        assistant = create_assistant(file_ids)
+        write_file(f"{path}/assistant_id.txt", assistant.id)
+        get_retrieval_files(assistant.id, row_data)
 
 
 @get_app.command()
-def row(start: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def row(split: str = "dev[0:1]", dataset_name="princeton-nlp/SWE-bench"):
     """Download one example"""
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[start]
-    id = row_data["instance_id"]
-    write_json("examples", f"{id}", row_data)
-    write_markdown("examples", f"{id}", row_data)
+    for row_data in dataset:
+        id = row_data["instance_id"]
+        write_json("examples", f"{id}", row_data)
+        write_markdown("examples", f"{id}", row_data)
 
 
 def diff_file_names(text: str) -> list[str]:

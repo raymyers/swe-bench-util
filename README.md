@@ -43,14 +43,14 @@ swe_bench_util get row
 
 Output
 ```
-File 'rows/sqlfluff__sqlfluff-4764.json' was saved
-File 'rows/sqlfluff__sqlfluff-4764.md' was saved
+File 'examples/sqlfluff__sqlfluff-4764.json' was saved
+File 'examples/sqlfluff__sqlfluff-4764.md' was saved
 ```
 
 Use jq to show a subset of the JSON.
 
 ```sh
-jq '. | {repo, instance_id, base_commit, problem_statement}' rows/sqlfluff__sqlfluff-4764.json
+jq '. | {repo, instance_id, base_commit, problem_statement}' examples/sqlfluff__sqlfluff-4764.json
 ```
 
 Save the Oracle (patched file list) for the dev subset.
@@ -59,14 +59,22 @@ swe_bench_util get oracle
 ```
 Output:
 ```
-File 'rows/oracle.json' was saved
+File 'examples/oracle.json' was saved
 ```
 ```sh
-jq '.[] | .repo' rows/oracle.json  | jq -s 'unique'
-jq '.[] | {repo, base_commit}' rows/oracle.json  | jq -s 'unique'
+jq '.[] | .repo' examples/oracle.json  | jq -s 'unique'
+jq '.[] | {repo, base_commit}' examples/oracle.json  | jq -s 'unique'
 ```
 
 ## Data
+
+By default, most commands will operate on the first row of the `dev` set, which is split `dev[0:1]` using the Huggingface [datasets](https://huggingface.co/docs/datasets/loading) API. You can specify a split using `--split`, for instance:
+
+* `--split dev` the entire dev split
+* `--split 'dev[0:10]'` first 10 rows
+* `--split 'dev[:10%]'` 10% sample
+
+Here is the shape of the data.
 
 ```
     dev: Dataset({
