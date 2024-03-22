@@ -1,10 +1,14 @@
 import json
 import os
+import concurrent.futures
+import time
+
+from tqdm import tqdm
 from streaming_assistants import patch
 from openai import OpenAI
 from openai.lib.streaming import AssistantEventHandler
 from typing_extensions import override
-from swe_bench_util.index.file_util import EXCLUDE_EXTS
+from swe_bench_util.index.file_util import EXCLUDE_EXTS, exponential_backoff_retry
 
 OPENAI_CLIENT = None
 
@@ -22,7 +26,6 @@ def upload_file(file_path) -> str | None:
     If the upload is successful, it returns the file ID.
     If excluded or an error occurs, it prints an error message and returns None.
     """
-    print(f"Processing {file_path}")
     try:
         if any(file_path.endswith(ext) for ext in EXCLUDE_EXTS):
             print(f"Skipping {file_path} because it has an excluded extension")
@@ -35,27 +38,48 @@ def upload_file(file_path) -> str | None:
             purpose="assistants",
         )
         return file.id
-    # handle server side errors
     except Exception as e:
-        print(f"Error processing {file_path}: {e}")
-        return None
+        raise e
 
 
 def index_to_astra_assistants(repo_dir):
     """
-    This function indexes the files in the given repository directory.
-    It walks through the directory, processes each file, and uploads it to the AI client.
-    The file IDs are then returned as a list.
+    Indexes files in the repository directory, uploads them, and returns their IDs.
     """
+    # Generate a list of file paths to upload
+    file_paths = [os.path.join(root, file) for root, _, files in os.walk(repo_dir) for file in files]
+    total_files = len(file_paths)
+
+    print("going to upload {total_files} files")
+    # Initialize the progress bar
+    pbar = tqdm(total=total_files, desc="Uploading files")
+
     file_ids = []
-    for root, dirs, files in os.walk(repo_dir):
-        for file_name in files:
-            file_path = os.path.join(root, file_name)
-            file_id = upload_file(file_path)
-            if file_id:
+    excluded_files = []
+
+    # Define a wrapper function to use with each file upload
+    def upload_and_progress(file_path):
+        try:
+            file_id = exponential_backoff_retry(upload_file,file_path)
+            if file_id is not None:
                 file_ids.append(file_id)
-                print(json.dumps(file_ids))
-    return file_ids
+            excluded_files.append(file_path)
+        finally:
+            # Update the progress bar in a thread-safe manner
+            pbar.update(1)
+
+    # Use ThreadPoolExecutor to upload files in parallel
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Map each file upload task to the executor
+        executor.map(upload_and_progress, file_paths)
+
+    # Ensure the progress bar is closed upon completion
+    pbar.close()
+
+    print(f"All uploaded file IDs: {file_ids}")
+    return file_ids, excluded_files
+
+
 
 def create_assistant(file_ids):
     client = open_ai_client()
@@ -139,7 +163,7 @@ class EventHandler(AssistantEventHandler):
     @override
     def on_run_step_done(self, run_step) -> None:
             chunks = [chunk.retrieval for chunk in run_step.step_details.tool_calls if chunk.retrieval][0]
-            self.file_names = [chunk["file_name"] for chunk in chunks]
+            self.file_names = list(set([chunk["file_name"] for chunk in chunks]))
             print(f'Files used in retrieval: {json.dumps(self.file_names)}')
 
 
@@ -160,6 +184,8 @@ def get_retrieval_files(assistant_id, row_data):
 
     handler = EventHandler()
     print(f"creating run")
+    print(f"thread.id {thread.id}")
+    print(f"assistant_id {assistant_id}")
     with open_ai_client().beta.threads.runs.create_and_stream(
             thread_id=thread.id,
             assistant_id=assistant_id,

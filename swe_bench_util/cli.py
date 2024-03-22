@@ -121,11 +121,19 @@ def astra_assistants(
             print(f'trying to load file {file} from {path}/file_ids.json')
             file_ids = json.load(file)
     else:
-        file_ids = index_to_astra_assistants(path)
-    write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
-    assistant = create_assistant(file_ids)
-    write_file(f"{path}/assistant_id.txt", assistant.id)
-    get_retrieval_files(assistant.id, row_data)
+        file_ids, excluded_files = index_to_astra_assistants(path)
+        write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
+        write_file(f"{path}/excluded_files.json", json.dumps(excluded_files, indent=2))
+    assistant_id = ""
+    if os.path.exists(f'{path}/assistant_id.txt'):
+        with open(f'{path}/assistant_id.txt', 'r') as file:
+            print(f'trying to load file {file} from {path}/assistant_id.txt')
+            assistant_id = file.read()
+    else:
+        assistant = create_assistant(file_ids)
+        write_file(f"{path}/assistant_id.txt", assistant.id)
+        assistant_id = assistant.id
+    get_retrieval_files(assistant_id, row_data)
 
 
 @get_app.command()
