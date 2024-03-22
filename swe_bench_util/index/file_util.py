@@ -71,7 +71,15 @@ EXCLUDE_EXTS: list[str] = [
     "poetry.lock",
 ]
 
-def exponential_backoff_retry(upload_func, file_path, max_retries=1000, initial_wait=1.0, backoff_factor=2, max_wait=60):
+
+def exponential_backoff_retry(
+    upload_func,
+    file_path,
+    max_retries=1000,
+    initial_wait=1.0,
+    backoff_factor=2,
+    max_wait=60,
+):
     """
     Wraps the upload function to implement exponential backoff in case of rate limiting,
     with a maximum wait time.
@@ -91,10 +99,14 @@ def exponential_backoff_retry(upload_func, file_path, max_retries=1000, initial_
             return upload_func(file_path)
         except Exception as e:
             if e.status_code == 429:  # Rate limited
-                print(f"Rate limited, retrying {file_path} after {wait_time} seconds...")
+                print(
+                    f"Rate limited, retrying {file_path} after {wait_time} seconds..."
+                )
                 time.sleep(wait_time)
                 retries += 1
-                wait_time = min(wait_time * backoff_factor, max_wait)  # Increase wait time but cap at max_wait
+                wait_time = min(
+                    wait_time * backoff_factor, max_wait
+                )  # Increase wait time but cap at max_wait
                 # Optional: add jitter to avoid the thundering herd problem
                 wait_time += random.uniform(0, wait_time * 0.1)
             else:

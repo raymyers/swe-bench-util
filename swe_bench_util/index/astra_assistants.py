@@ -47,7 +47,11 @@ def index_to_astra_assistants(repo_dir):
     Indexes files in the repository directory, uploads them, and returns their IDs.
     """
     # Generate a list of file paths to upload
-    file_paths = [os.path.join(root, file) for root, _, files in os.walk(repo_dir) for file in files]
+    file_paths = [
+        os.path.join(root, file)
+        for root, _, files in os.walk(repo_dir)
+        for file in files
+    ]
     total_files = len(file_paths)
 
     print("going to upload {total_files} files")
@@ -60,7 +64,7 @@ def index_to_astra_assistants(repo_dir):
     # Define a wrapper function to use with each file upload
     def upload_and_progress(file_path):
         try:
-            file_id = exponential_backoff_retry(upload_file,file_path)
+            file_id = exponential_backoff_retry(upload_file, file_path)
             if file_id is not None:
                 file_ids.append(file_id)
             excluded_files.append(file_path)
@@ -78,8 +82,6 @@ def index_to_astra_assistants(repo_dir):
 
     print(f"All uploaded file IDs: {file_ids}")
     return file_ids, excluded_files
-
-
 
 
 def create_assistant(file_ids):
@@ -194,7 +196,7 @@ def get_retrieval_files(assistant_id, row_data):
         assistant_id=assistant_id,
         event_handler=handler,
     ) as stream:
-        #stream.until_done()
+        # stream.until_done()
         print("producing diff:")
         for text in stream.text_deltas:
             print(text, end="", flush=True)
