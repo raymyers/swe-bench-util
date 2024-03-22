@@ -68,6 +68,31 @@ jq '.[] | {repo, base_commit}' examples/oracle.json  | jq -s 'unique'
 Git checkout the repo / base_commit of an example.
 `swe-bench-util checkout --id pydicom__pydicom-793`
 
+
+index and run inference with astra-assistants:
+
+Make sure you have your keys set up in `.env`
+
+```sh
+cp .env.backup .env
+```
+
+and set your keys. Then run the index command:
+
+
+```sh
+swe_bench_util index astra-assistants
+```
+
+Output:
+
+```
+...
+Files used in retrieval: ["test_wcs.py", "wcs.py", "test_utils.py", "test_transform_coord_meta.py", "CHANGES.rst", "test_images.py", "test_misc.py"]
+...
+```
+
+
 ## Data
 
 By default, most commands will operate on the `dev` split, using the Huggingface [datasets](https://huggingface.co/docs/datasets/loading) API. You can specify a split using `--split`, for instance:
