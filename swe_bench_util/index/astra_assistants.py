@@ -1,6 +1,7 @@
 import json
 import os
 import concurrent.futures
+import threading
 import time
 
 from tqdm import tqdm
@@ -12,13 +13,14 @@ from swe_bench_util.index.file_util import EXCLUDE_EXTS, exponential_backoff_ret
 
 OPENAI_CLIENT = None
 
+open_ai_client_lock = threading.Lock()
 
 def open_ai_client():
     global OPENAI_CLIENT
-    if OPENAI_CLIENT is None:
-        OPENAI_CLIENT = patch(OpenAI())
+    with open_ai_client_lock:  # Acquire the lock before checking OPENAI_CLIENT
+        if OPENAI_CLIENT is None:
+            OPENAI_CLIENT = patch(OpenAI())
     return OPENAI_CLIENT
-
 
 def upload_file(file_path) -> str | None:
     """
