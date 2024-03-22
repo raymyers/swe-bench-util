@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "swe-bench-util"
+version = "0.0.0"
+description = "Scripts for working with SWE-bench, the AI coding agent benchmark."
+authors = ["raymyers"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    {include = "swe_bench_util"},
+]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+
+click = "8.1.7"
+packaging = "24.0"
+pluggy = "1.4.0"
+pytest = "8.1.1"
+typer = "0.9.0"
+datasets = "2.18.0"
+openai = "1.14.1"
+streaming-assistants = "0.14.0"
+python-dotenv = "1.0.1"
+ruff = "0.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+swe-bench-util = "swe_bench_util.__main__:main"

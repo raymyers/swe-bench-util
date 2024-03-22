@@ -11,7 +11,11 @@ from dotenv import load_dotenv
 
 from swe_bench_util import __app_name__, __version__
 
-from swe_bench_util.index.astra_assistants import index_to_astra_assistants, create_assistant, get_retrieval_files
+from swe_bench_util.index.astra_assistants import (
+    index_to_astra_assistants,
+    create_assistant,
+    get_retrieval_files,
+)
 
 app = typer.Typer()
 get_app = typer.Typer()
@@ -26,6 +30,7 @@ def _version_callback(value: bool) -> None:
     if value:
         typer.echo(f"{__app_name__} v{__version__}")
         raise typer.Exit()
+
 
 def write_file(path, text):
     with open(path, "w") as f:
@@ -80,8 +85,10 @@ def maybe_clone(repo_url, repo_dir):
 def checkout_commit(repo_dir, commit_hash):
     subprocess.run(["git", "checkout", commit_hash], cwd=repo_dir, check=True)
 
+
 def checkout_dir(dataset_name: str, repo: str):
     return f"checkouts/{dataset_name}/{repo.replace('/', '__')}"
+
 
 def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> str:
     repo_url = f"git@github.com:{repo}.git"
@@ -91,59 +98,94 @@ def checkout_repo_at_commit(repo: str, dataset_name: str, base_commit: str) -> s
     checkout_commit(path, base_commit)
     return path
 
+
 @app.command()
 def checkout(
-        index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
 ):
-    dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
-    path = checkout_repo_at_commit(
-        row_data["repo"], dataset_name, row_data["base_commit"]
-    )
-    print(f"checked out to '{path}'")
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
+    for row_data in dataset:
+        path = checkout_repo_at_commit(
+            row_data["repo"], dataset_name, row_data["base_commit"]
+        )
+        print(f"checked out to '{path}'")
 
 
 @index_app.command()
 def astra_assistants(
-        index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    max: int = 1,
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
 ):
-    dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
-    path = checkout_repo_at_commit(
-        row_data["repo"], dataset_name, row_data["base_commit"]
-    )
-    if not os.path.exists(path):
-        os.makedirs(path)
-        print(f"Directory '{path}' was created.")
-    file_ids = []
-    if os.path.exists(f'{path}/file_ids.json'):
-        with open(f'{path}/file_ids.json', 'r') as file:
-            print(f'trying to load file {file} from {path}/file_ids.json')
-            file_ids = json.load(file)
-    else:
-        file_ids, excluded_files = index_to_astra_assistants(path)
-        write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
-        write_file(f"{path}/excluded_files.json", json.dumps(excluded_files, indent=2))
-    assistant_id = ""
-    if os.path.exists(f'{path}/assistant_id.txt'):
-        with open(f'{path}/assistant_id.txt', 'r') as file:
-            print(f'trying to load file {file} from {path}/assistant_id.txt')
-            assistant_id = file.read()
-    else:
-        assistant = create_assistant(file_ids)
-        write_file(f"{path}/assistant_id.txt", assistant.id)
-        assistant_id = assistant.id
-    get_retrieval_files(assistant_id, row_data)
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
+    if len(dataset) > max:
+        user_input = input(
+            f"Selected {len(dataset)} entries in split {split}. Do you want to continue indexing? (y/n): "
+        )
+        if user_input.lower() != "y":
+            print("Aborting.")
+            return
+    for row_data in dataset:
+        path = checkout_repo_at_commit(
+            row_data["repo"], dataset_name, row_data["base_commit"]
+        )
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Directory '{path}' was created.")
+        file_ids = []
+        if os.path.exists(f"{path}/file_ids.json"):
+            with open(f"{path}/file_ids.json", "r") as file:
+                print(f"trying to load file {file} from {path}/file_ids.json")
+                file_ids = json.load(file)
+        else:
+            file_ids, excluded_files = index_to_astra_assistants(path)
+            write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
+            write_file(f"{path}/excluded_files.json", json.dumps(excluded_files, indent=2))
+     
+        assistant_id = ""
+        if os.path.exists(f'{path}/assistant_id.txt'):
+            with open(f'{path}/assistant_id.txt', 'r') as file:
+                print(f'trying to load file {file} from {path}/assistant_id.txt')
+                assistant_id = file.read()
+        else:
+            assistant = create_assistant(file_ids)
+            write_file(f"{path}/assistant_id.txt", assistant.id)
+            assistant_id = assistant.id
+        get_retrieval_files(assistant_id, row_data)
 
 
 @get_app.command()
-def row(index: int = 0, split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def rows(
+    split: str = "dev",
+    dataset_name: str = "princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
+):
     """Download one example"""
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
+    for row_data in dataset:
+        row_id = row_data["instance_id"]
+        write_json("examples", f"{row_id}", row_data)
+        write_markdown("examples", f"{row_id}", row_data)
+
+
+def load_filtered_dataset(
+    split: str, dataset_name: str, repo: Optional[str] = None, id: Optional[str] = None
+):
+    print(f"using --dataset-name '{dataset_name}' --split '{split}'")
     dataset = load_dataset(dataset_name, split=split)
-    row_data = dataset[index]
-    id = row_data["instance_id"]
-    write_json("examples", f"{id}", row_data)
-    write_markdown("examples", f"{id}", row_data)
+    if repo:
+        print(f"      --repo '{repo}'")
+        dataset = dataset.filter(lambda el: el["repo"] == repo)
+    if id:
+        print(f"      --id '{id}'")
+        dataset = dataset.filter(lambda el: el["instance_id"] == id)
+    return dataset
 
 
 def diff_file_names(text: str) -> list[str]:
@@ -153,9 +195,14 @@ def diff_file_names(text: str) -> list[str]:
 
 
 @get_app.command()
-def oracle(split: str = "dev", dataset_name="princeton-nlp/SWE-bench"):
+def oracle(
+    split: str = "dev",
+    dataset_name="princeton-nlp/SWE-bench",
+    repo: Optional[str] = None,
+    id: Optional[str] = None,
+):
     """Down load oracle (patched files) for all examples in split"""
-    dataset = load_dataset(dataset_name, split=split)
+    dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     result = []
     for row_data in dataset:
         patch_files = diff_file_names(row_data["patch"])
