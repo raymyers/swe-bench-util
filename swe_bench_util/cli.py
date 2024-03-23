@@ -105,6 +105,7 @@ def checkout(
     dataset_name="princeton-nlp/SWE-bench",
     repo: Optional[str] = None,
     id: Optional[str] = None,
+    exec: Optional[str] = None,
 ):
     dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     for row_data in dataset:
@@ -112,6 +113,19 @@ def checkout(
             row_data["repo"], dataset_name, row_data["base_commit"]
         )
         print(f"checked out to '{path}'")
+        if exec:
+            env_vars = {
+                **os.environ,
+                **{
+                    f"BENCH_{key.upper()}": str(value)
+                    for key, value in row_data.items()
+                },
+            }
+            env_vars["CALLING_CWD"] = os.getcwd()
+            env_vars["BENCH_REPO_DIR"] = path
+            # This will raise if the command is unsuccessful.
+            result = subprocess.run(exec, check=True, env=env_vars, shell=True)
+            print(f"Command: '{exec}', Exit Code: {result.returncode}")
 
 
 @index_app.command()

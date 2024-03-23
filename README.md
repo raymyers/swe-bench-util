@@ -8,7 +8,8 @@ If you are trying to beat Devin, see also The [SWE-bench fork](https://github.co
   * `python -m swe_bench_util --help`
 * `get rows` Download SWE-bench examples from HuggingFace to json file
 * `get oracle` Get "oracle" patch file lists parsed from diffs ([context](https://github.com/raymyers/swe-bench-util/issues/1))
-* `checkout` Clone the repo for an example and checkout the base_commit
+* `checkout` Clone the repo for examples and checkout the base_commit
+  * Optionally run a command with --exec
 * `index astra_assistants` checkout example then upload to DataStack's [Astra Assistants](https://www.datastax.com/blog/introducing-the-astra-assistants-api) using phact's [streaming-assistants](https://github.com/phact/streaming-assistants) library
 
 ## Setup
