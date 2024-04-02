@@ -39,6 +39,7 @@ def upload_file(file_path) -> str | None:
                 "rb",
             ),
             purpose="assistants",
+            embedding_model="text-embedding-3-large",
         )
         return file.id
     except Exception as e:

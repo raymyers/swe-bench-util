@@ -930,13 +930,13 @@ files = [
 
 [[package]]
 name = "litellm"
-version = "1.32.9"
+version = "1.34.21"
 description = "Library to easily interface with LLM API providers"
 optional = false
 python-versions = "!=2.7.*,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,!=3.7.*,>=3.8"
 files = [
-    {file = "litellm-1.32.9-py3-none-any.whl", hash = "sha256:eb0d1dcd2dfe379b632003a14301f71d3d426a65afcffe5d47abffe24c7c37b5"},
-    {file = "litellm-1.32.9.tar.gz", hash = "sha256:1bf39faa707d8977620592334a385137b0251a65581d7c68cbf9387276ca7d66"},
+    {file = "litellm-1.34.21-py3-none-any.whl", hash = "sha256:3cc9d60ac50ca4e76f5ef9c2d5438ee2789283bb6cd0ce70e58fb12409bc9e3f"},
+    {file = "litellm-1.34.21.tar.gz", hash = "sha256:a87f5d2b165fb94b3e8662f8a7f2a7a9be15be0399ad4a4025ed876aa20f8378"},
 ]
 
 [package.dependencies]
@@ -951,8 +951,8 @@ tiktoken = ">=0.4.0"
 tokenizers = "*"
 
 [package.extras]
-extra-proxy = ["streamlit (>=1.29.0,<2.0.0)"]
-proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "argon2-cffi (>=23.1.0,<24.0.0)", "backoff", "fastapi (>=0.104.1,<0.105.0)", "fastapi-sso (>=0.10.0,<0.11.0)", "gunicorn (>=21.2.0,<22.0.0)", "orjson (>=3.9.7,<4.0.0)", "python-multipart (>=0.0.6,<0.0.7)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
+extra-proxy = ["azure-identity (>=1.15.0,<2.0.0)", "azure-keyvault-secrets (>=4.8.0,<5.0.0)", "google-cloud-kms (>=2.21.3,<3.0.0)", "prisma (==0.11.0)", "resend (>=0.8.0,<0.9.0)"]
+proxy = ["PyJWT (>=2.8.0,<3.0.0)", "apscheduler (>=3.10.4,<4.0.0)", "backoff", "cryptography (>=42.0.5,<43.0.0)", "fastapi (>=0.109.1,<0.110.0)", "fastapi-sso (>=0.10.0,<0.11.0)", "gunicorn (>=21.2.0,<22.0.0)", "orjson (>=3.9.7,<4.0.0)", "python-multipart (>=0.0.9,<0.0.10)", "pyyaml (>=6.0.1,<7.0.0)", "rq", "uvicorn (>=0.22.0,<0.23.0)"]
 
 [[package]]
 name = "markupsafe"
@@ -1869,21 +1869,21 @@ files = [
 
 [[package]]
 name = "streaming-assistants"
-version = "0.14.0"
+version = "0.15.6"
 description = "Streaming enabled Assistants API"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = "<4.0,>=3.10"
 files = [
-    {file = "streaming_assistants-0.14.0-py3-none-any.whl", hash = "sha256:d1e35a398d0ec4544019d6cdbf2a98549578bbe017581acca8420262cb1e5c3d"},
-    {file = "streaming_assistants-0.14.0.tar.gz", hash = "sha256:1247b92cda411b5e585c8d860746e33d9aacf05ae433aab6dfeed9effd20f6e8"},
+    {file = "streaming_assistants-0.15.6-py3-none-any.whl", hash = "sha256:745d1e67b436427da4b1a32e2066afb7c4e52c92b92cab93b638404fad70ec16"},
+    {file = "streaming_assistants-0.15.6.tar.gz", hash = "sha256:0cd13f1edd6f4028a372b6f2bd52a50b0528232e246bbedde8a50fe3815cebe2"},
 ]
 
 [package.dependencies]
 boto3 = ">=1.34.31,<2.0.0"
 google-generativeai = ">=0.3.2,<0.4.0"
 httpx = ">=0.26.0,<0.27.0"
-litellm = ">=1.20.6,<2.0.0"
-openai = ">=1.1.0,<2.0.0"
+litellm = ">=1.34.18,<2.0.0"
+openai = ">=1.14.0,<2.0.0"
 
 [[package]]
 name = "tiktoken"
@@ -2393,4 +2393,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<4.0"
-content-hash = "a4df328dadcc3904238c86b15cf9443a0f3d674eba0de22aa844bce7a699ee2a"
+content-hash = "53d5d368b13d8b9c1dc86397254801f2f59c59d8675e2d914533490da3e2c4e5"
