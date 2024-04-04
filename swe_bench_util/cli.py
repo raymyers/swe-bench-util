@@ -1,5 +1,5 @@
 """This module provides the CLI."""
-
+from dataclasses import asdict
 from typing import Optional
 import json
 import sys
@@ -10,11 +10,12 @@ from datasets import load_dataset
 from dotenv import load_dotenv
 
 from swe_bench_util import __app_name__, __version__
+from swe_bench_util.file_hint_eval import eval_file_hints_vs_oracle, BenchExample, FileHint
 
 from swe_bench_util.index.astra_assistants import (
     index_to_astra_assistants,
     create_assistant,
-    get_retrieval_files,
+    get_retrieval_file_ids,
 )
 
 app = typer.Typer()
@@ -41,7 +42,10 @@ def write_file(path, text):
 def write_json(path, name, data):
     json_str = json.dumps(data, indent=2)
     json_path = f"{path}/{name}.json"
-    write_file(json_path, json_str)
+    try:
+        write_file(json_path, json_str)
+    except Exception as e:
+        raise e
 
 
 def format_markdown_code_block(text):
@@ -144,35 +148,47 @@ def astra_assistants(
         if user_input.lower() != "y":
             print("Aborting.")
             return
+    bench_list = []
+    file_list = []
     for row_data in dataset:
+        id = row_data["instance_id"]
         path = checkout_repo_at_commit(
             row_data["repo"], dataset_name, row_data["base_commit"]
         )
         if not os.path.exists(path):
             os.makedirs(path)
             print(f"Directory '{path}' was created.")
-        file_ids = []
-        if os.path.exists(f"{path}/file_ids.json"):
-            with open(f"{path}/file_ids.json", "r") as file:
-                print(f"trying to load file {file} from {path}/file_ids.json")
-                file_ids = json.load(file)
+        file_id_path_mapping = []
+        if os.path.exists(f"{path}/{id}-file_ids.json"):
+            with open(f"{path}/{id}-file_ids.json", "r") as file:
+                print(f"trying to load file {file} from {path}/{id}-file_ids.json")
+                file_id_path_mapping = json.load(file)
         else:
-            file_ids, excluded_files = index_to_astra_assistants(path)
-            write_file(f"{path}/file_ids.json", json.dumps(file_ids, indent=2))
+            file_id_path_mapping, excluded_files = index_to_astra_assistants(path)
+            write_file(f"{path}/{id}-file_ids.json", json.dumps(file_id_path_mapping, indent=2))
             write_file(
-                f"{path}/excluded_files.json", json.dumps(excluded_files, indent=2)
+                f"{path}/{id}-excluded_files.json", json.dumps(excluded_files, indent=2)
             )
-
         assistant_id = ""
-        if os.path.exists(f"{path}/assistant_id.txt"):
-            with open(f"{path}/assistant_id.txt", "r") as file:
-                print(f"trying to load file {file} from {path}/assistant_id.txt")
+        if os.path.exists(f"{path}/{id}-assistant_id.txt"):
+            with open(f"{path}/{id}-assistant_id.txt", "r") as file:
+                print(f"trying to load file {file} from {path}/{id}-assistant_id.txt")
                 assistant_id = file.read()
         else:
-            assistant = create_assistant(file_ids)
-            write_file(f"{path}/assistant_id.txt", assistant.id)
+            file_ids = list(file_id_path_mapping.keys())
+
+            assistant = create_assistant(file_ids, id)
+            write_file(f"{path}/{id}-assistant_id.txt", assistant.id)
             assistant_id = assistant.id
-        get_retrieval_files(assistant_id, row_data)
+        retrieval_file_ids, search_strings = get_retrieval_file_ids(assistant_id, row_data)
+        file_names = []
+        for retrieval_file_id in retrieval_file_ids:
+            file_names.append(file_id_path_mapping[retrieval_file_id])
+        file_list += [FileHint(id = id, hint_files = file_names)]
+        repo = row_data["repo"]
+        bench_list += oracle(split=split, dataset_name=dataset_name, repo=repo, id=id)
+    eval = eval_file_hints_vs_oracle(bench_list, file_list)
+    print(eval)
 
 
 @get_app.command()
@@ -217,22 +233,24 @@ def oracle(
     repo: Optional[str] = None,
     id: Optional[str] = None,
 ):
-    """Down load oracle (patched files) for all examples in split"""
+    """Download oracle (patched files) for all examples in split"""
     dataset = load_filtered_dataset(split, dataset_name, repo=repo, id=id)
     result = []
     for row_data in dataset:
         patch_files = diff_file_names(row_data["patch"])
         test_patch_files = diff_file_names(row_data["test_patch"])
         result.append(
-            {
-                "id": row_data["instance_id"],
-                "repo": row_data["repo"],
-                "base_commit": row_data["base_commit"],
-                "patch_files": patch_files,
-                "test_patch_files": test_patch_files,
-            }
+            BenchExample(
+                id = row_data["instance_id"],
+                repo = row_data["repo"],
+                base_commit = row_data["base_commit"],
+                patch_files = patch_files,
+                test_patch_files = test_patch_files,
+            )
         )
-    write_json("examples", "oracle", result)
+    dict_result = [asdict(row) for row in result]
+    write_json("examples", "oracle", dict_result)
+    return result
 
 
 @app.callback()
