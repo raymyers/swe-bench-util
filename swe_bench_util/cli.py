@@ -150,6 +150,7 @@ def astra_assistants(
             return
     bench_list = []
     file_list = []
+    search_string_list = []
     for row_data in dataset:
         id = row_data["instance_id"]
         path = checkout_repo_at_commit(
@@ -181,14 +182,22 @@ def astra_assistants(
             write_file(f"{path}/{id}-assistant_id.txt", assistant.id)
             assistant_id = assistant.id
         retrieval_file_ids, search_strings = get_retrieval_file_ids(assistant_id, row_data)
+        search_string_list.append(search_strings[0])
         file_names = []
         for retrieval_file_id in retrieval_file_ids:
             file_names.append(file_id_path_mapping[retrieval_file_id])
         file_list += [FileHint(id = id, hint_files = file_names)]
         repo = row_data["repo"]
         bench_list += oracle(split=split, dataset_name=dataset_name, repo=repo, id=id)
-    eval = eval_file_hints_vs_oracle(bench_list, file_list)
+    evals = eval_file_hints_vs_oracle(bench_list, file_list)
+    i = 0
+    dict_evals = []
+    for eval in evals:
+        eval.search_string=search_string_list[i]
+        dict_evals.append(asdict(eval))
+        i+=1
     print(eval)
+    write_json("recall","results", dict_evals)
 
 
 @get_app.command()
