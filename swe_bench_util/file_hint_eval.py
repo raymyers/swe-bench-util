@@ -32,6 +32,7 @@ class FileHintAssessed:
     test_patch_files: list[str]
     precision: float
     recall: float
+    search_string: str = ""
 
 
 def eval_file_hints_vs_oracle(
